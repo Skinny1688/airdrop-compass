@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airdrop Compass — Дашборд для аирдроп-фармеров</title>
+<meta name="description" content="Видишь где eligible, что осталось добить. Дашборд для аирдроп-фармеров: все кошельки, все дропы, все статусы на одном экране.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #FFFFFF;
+    color: #1E293B;
+    line-height: 1.5;
+  }
+
+  /* === NAVBAR === */
+  .navbar {
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 56px;
+    background: #FFFFFF;
+    border-bottom: 1px solid #EFF2F5;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; color: #0D1217; }
+  .nav-brand-icon { width: 32px; height: 32px; background: #4BCC00; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-link { color: #475569; font-size: 14px; font-weight: 500; text-decoration: none; cursor: pointer; transition: color .2s; }
+  .nav-link:hover { color: #4BCC00; }
+  .nav-cta { background: #4BCC00; color: #FFFFFF; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: background .2s; }
+  .nav-cta:hover { background: #3BB000; }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 40px 24px; }
+
+  /* === HERO === */
+  .hero { text-align: center; margin-bottom: 48px; }
+  .hero h1 { font-size: 36px; color: #0D1217; margin-bottom: 10px; letter-spacing: -0.5px; line-height: 1.2; }
+  .hero h1 .green { color: #4BCC00; }
+  .hero p { font-size: 16px; color: #475569; max-width: 520px; margin: 0 auto; }
+  .hero-tags { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .hero-tag { background: #F8FAFC; border: 1px solid #EFF2F5; color: #475569; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+
+  /* === SECTION TITLE === */
+  .section-title { font-size: 20px; font-weight: 700; color: #0D1217; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* === ALERT BANNER === */
+  .alert { display: flex; align-items: center; gap: 12px; background: #33C0FF0D; border: 1px solid #33C0FF33; border-radius: 10px; padding: 14px 18px; margin-bottom: 32px; transition: opacity .3s; }
+  .alert-icon { width: 36px; height: 36px; background: #33C0FF; color: #FFFFFF; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .alert-content { flex: 1; }
+  .alert-title { font-size: 14px; font-weight: 600; color: #0D1217; }
+  .alert-desc { font-size: 13px; color: #475569; margin-top: 2px; }
+  .alert-btn { background: #33C0FF; color: #FFFFFF; padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; white-space: nowrap; }
+  .alert-btn:hover { background: #1BA8E8; }
+
+  /* === DASHBOARD === */
+  .dashboard { background: #FFFFFF; border-radius: 12px; border: 1px solid #EFF2F5; overflow: hidden; margin-bottom: 48px; }
+  .dashboard-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid #EFF2F5; background: #F8FAFC; }
+  .dashboard-title { font-size: 15px; font-weight: 700; color: #0D1217; display: flex; align-items: center; gap: 8px; }
+  .live-badge { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; background: #00A83E15; color: #00A83E; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .live-dot { width: 6px; height: 6px; background: #00A83E; border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+  .refresh-btn { background: #F8FAFC; border: 1px solid #EFF2F5; border-radius: 6px; padding: 5px 12px; font-size: 13px; color: #475569; cursor: pointer; font-weight: 500; transition: all .2s; }
+  .refresh-btn:hover { border-color: #4BCC00; color: #4BCC00; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; padding: 10px 16px; background: #F8FAFC; color: #64748B; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid #EFF2F5; white-space: nowrap; }
+  th:first-child { min-width: 140px; }
+  td { padding: 14px 16px; border-bottom: 1px solid #F1F5F9; font-size: 14px; color: #1E293B; }
+  tr:last-child td { border-bottom: none; }
+  .wallet-addr { color: #0D1217; font-family: 'SF Mono', monospace; font-size: 13px; font-weight: 600; }
+  .wallet-label { color: #94A3B8; font-size: 12px; margin-top: 2px; }
+
+  .status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: transform .15s; user-select: none; }
+  .status:hover { transform: scale(1.05); }
+  .status-eligible { background: #00A83E15; color: #00A83E; }
+  .status-partial { background: #FFDD3315; color: #B45309; }
+  .status-not { background: #FF3A3315; color: #FF3A33; }
+
+  /* Detail row */
+  .detail-row td { background: #FAFCFE; padding: 16px 16px 18px; border-bottom: 1px solid #EFF2F5; }
+  .detail-header { color: #64748B; font-size: 12px; margin-bottom: 10px; font-weight: 600; }
+  .criteria { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .criteria-item { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #475569; }
+  .check { color: #00A83E; font-weight: 700; }
+  .cross { color: #FF3A33; font-weight: 700; }
+  .remaining { display: inline-block; padding: 7px 14px; background: #FFDD3315; border-radius: 8px; color: #B45309; font-size: 13px; font-weight: 500; }
+
+  /* === FEATURES === */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px; }
+  .feature-card { background: #FFFFFF; border: 1px solid #EFF2F5; border-radius: 12px; padding: 24px; transition: border-color .2s; }
+  .feature-card:hover { border-color: #4BCC0055; }
+  .feature-icon { width: 40px; height: 40px; background: #4BCC0015; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+  .feature-title { font-size: 15px; font-weight: 700; color: #0D1217; margin-bottom: 6px; }
+  .feature-desc { font-size: 13px; color: #475569; line-height: 1.5; }
+
+  /* === PARTNER BLOCK === */
+  .partner { background: #FFFFFF; border-radius: 12px; padding: 32px; border: 1px solid #EFF2F5; margin-bottom: 48px; }
+  .partner-header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+  .partner h2 { color: #0D1217; font-size: 22px; font-weight: 700; }
+  .partner-badge { background: #4BCC0015; color: #4BCC00; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  .partner-desc { color: #64748B; margin-bottom: 24px; font-size: 14px; }
+
+  /* Calculator */
+  .calc-section { background: #F8FAFC; border-radius: 10px; padding: 20px; margin-bottom: 24px; }
+  .calc-section-title { font-size: 13px; font-weight: 600; color: #0D1217; margin-bottom: 16px; text-transform: uppercase; letter-spacing: .4px; }
+  .calc-controls { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+  .calc-control { display: flex; align-items: center; gap: 12px; }
+  .calc-control-label { font-size: 14px; color: #475569; min-width: 120px; font-weight: 500; }
+  .calc-slider { flex: 1; -webkit-appearance: none; appearance: none; height: 6px; background: #EFF2F5; border-radius: 3px; outline: none; }
+  .calc-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #4BCC00; border-radius: 50%; cursor: pointer; border: 2px solid #FFFFFF; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+  .calc-slider::-moz-range-thumb { width: 18px; height: 18px; background: #4BCC00; border-radius: 50%; cursor: pointer; border: 2px solid #FFFFFF; }
+  .calc-control-value { font-size: 14px; font-weight: 700; color: #0D1217; min-width: 70px; text-align: right; }
+
+  .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .calc-card { background: #FFFFFF; border-radius: 10px; padding: 16px; border: 1px solid #EFF2F5; text-align: center; }
+  .calc-label { color: #64748B; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; font-weight: 600; }
+  .calc-value { font-size: 22px; font-weight: 700; color: #0D1217; }
+  .calc-sub { color: #94A3B8; font-size: 12px; margin-top: 3px; }
+  .profit-card { background: linear-gradient(135deg, #4BCC000D 0%, #4BCC001A 100%); border-color: #4BCC0033; }
+  .profit-value { font-size: 26px; color: #4BCC00; }
+  .profit-sub { color: #4BCC00; font-size: 12px; font-weight: 600; margin-top: 3px; }
+
+  /* Terms */
+  .terms-row { display: flex; gap: 16px; padding-top: 20px; border-top: 1px solid #EFF2F5; flex-wrap: wrap; }
+  .term-item { flex: 1; min-width: 120px; }
+  .term-num { font-size: 22px; font-weight: 700; color: #4BCC00; }
+  .term-label { font-size: 13px; color: #475569; margin-top: 2px; }
+
+  /* Promocode */
+  .promocode-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .promocode { display: inline-flex; align-items: center; gap: 8px; background: #0D1217; color: #4BCC00; padding: 10px 18px; border-radius: 8px; font-family: 'SF Mono', monospace; font-weight: 700; font-size: 15px; }
+  .promocode-dot { width: 8px; height: 8px; background: #4BCC00; border-radius: 50%; }
+  .promocode-copy { background: #F8FAFC; border: 1px solid #EFF2F5; border-radius: 8px; padding: 10px 16px; font-size: 13px; color: #475569; cursor: pointer; font-weight: 500; transition: all .2s; }
+  .promocode-copy:hover { border-color: #4BCC00; color: #4BCC00; }
+
+  /* Security */
+  .security { display: flex; gap: 24px; margin-top: 24px; padding-top: 24px; border-top: 1px solid #EFF2F5; flex-wrap: wrap; }
+  .sec-item { display: flex; align-items: center; gap: 8px; color: #475569; font-size: 13px; }
+  .sec-icon { width: 28px; height: 28px; background: #00A83E15; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+  /* === CONTACT === */
+  .contact { text-align: center; padding: 24px; color: #475569; font-size: 14px; }
+  .contact a { color: #4BCC00; font-weight: 600; text-decoration: none; }
+  .contact a:hover { text-decoration: underline; }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .hero h1 { font-size: 26px; }
+    .features { grid-template-columns: 1fr; }
+    .calc-grid { grid-template-columns: repeat(2, 1fr); }
+    .terms-row { flex-direction: column; gap: 12px; }
+    .table-wrap { font-size: 13px; }
+    th, td { padding: 10px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <div class="nav-brand-icon">🧭</div>
+    Airdrop Compass
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" onclick="scrollToId('demo')">Демо</a>
+    <a class="nav-link" onclick="scrollToId('features')">Возможности</a>
+    <a class="nav-link" onclick="scrollToId('partner')">Партнёрам</a>
+    <a class="nav-link" onclick="scrollToId('security')">Безопасность</a>
+  </div>
+  <button class="nav-cta" onclick="scrollToId('demo')">Попробовать демо</button>
+</nav>
+
+<div class="container">
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Где ты <span class="green">eligible</span>, а что осталось добить</h1>
+    <p>Дашборд для аирдроп-фармеров. Все кошельки, все дропы, все статусы — на одном экране. Заменяет Notion-таблицу и ручной Etherscan.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">🔒 Read-only</span>
+      <span class="hero-tag">⚡ Без приватных ключей</span>
+      <span class="hero-tag">📊 5 дропов · 3 кошелька</span>
+    </div>
+  </section>
+
+  <!-- ALERT BANNER -->
+  <div class="alert" id="alertBanner">
+    <div class="alert-icon">🔔</div>
+    <div class="alert-content">
+      <div class="alert-title">Кошелёк «Ферма 1» стал eligible по ZKsync</div>
+      <div class="alert-desc">Статус изменился: partial → eligible. Все 5 критериев выполнены.</div>
+    </div>
+    <button class="alert-btn" onclick="document.getElementById('alertBanner').style.display='none'">Понятно</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section id="demo">
+    <div class="section-title">📊 Демо-дашборд</div>
+    <div class="dashboard">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          Кошельки × Дропы
+          <span class="live-badge"><span class="live-dot"></span> Обновлено 2 мин назад</span>
+        </div>
+        <button class="refresh-btn" onclick="refreshDemo()">↻ Обновить</button>
+      </div>
+      <div class="table-wrap">
+        <table id="dropTable">
+          <thead>
+            <tr>
+              <th>Кошелёк</th>
+              <th>Arbitrum</th>
+              <th>ZKsync</th>
+              <th>LayerZero</th>
+              <th>Starknet</th>
+              <th>EigenLayer</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Filled by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:13px;color:#64748B;margin-top:-28px;margin-bottom:48px;">👆 Нажми на статус, чтобы увидеть детали критериев</p>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="section-title">Что умеет Compass</div>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Один экран вместо 10 вкладок</div>
+        <div class="feature-desc">Все кошельки, все дропы, все статусы — на одном дашборде. Больше не нужно открывать Etherscan для каждого кошелька отдельно.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Видишь чего не хватает</div>
+        <div class="feature-desc">Не просто «участвую», а конкретные критерии: «осталось 4 уникальных дня и $500 объёма». Точно знаешь, что делать дальше.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <div class="feature-title">Алёрт при изменении статуса</div>
+        <div class="feature-desc">Partial → eligible → пуш в Telegram. Не пропустишь момент, когда прошёл отбор. Пересканирование каждые 24 часа.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PARTNER -->
+  <section id="partner">
+    <div class="section-title">🤝 Партнёрская программа</div>
+    <div class="partner">
+      <div class="partner-header">
+        <h2>Рекомендуй — и зарабатывай</h2>
+        <span class="partner-badge">25% пожизненно</span>
+      </div>
+      <p class="partner-desc">5 публикаций в вашем канале → 25% с каждого оплатившего по вашему промокоду. Без срока сгорания — пока от вас приходят люди, вы получаете доход.</p>
+
+      <div class="promocode-wrap">
+        <div class="promocode">
+          <span class="promocode-dot"></span>
+          Ваш промокод: FARM2026
+        </div>
+        <button class="promocode-copy" onclick="copyPromo()">Копировать</button>
+      </div>
+
+      <!-- Interactive Calculator -->
+      <div class="calc-section">
+        <div class="calc-section-title">Калькулятор дохода</div>
+        <div class="calc-controls">
+          <div class="calc-control">
+            <span class="calc-control-label">Аудитория</span>
+            <input type="range" class="calc-slider" id="audienceSlider" min="1000" max="50000" step="1000" value="10000" oninput="updateCalc()">
+            <span class="calc-control-value" id="audienceVal">10K</span>
+          </div>
+          <div class="calc-control">
+            <span class="calc-control-label">Конверсия</span>
+            <input type="range" class="calc-slider" id="convSlider" min="1" max="5" step="0.5" value="2" oninput="updateCalc()">
+            <span class="calc-control-value" id="convVal">2%</span>
+          </div>
+        </div>
+        <div class="calc-grid">
+          <div class="calc-card">
+            <div class="calc-label">Регистраций</div>
+            <div class="calc-value" id="regsVal">200</div>
+            <div class="calc-sub">из аудитории</div>
+          </div>
+          <div class="calc-card">
+            <div class="calc-label">Оплатят</div>
+            <div class="calc-value" id="payVal">40</div>
+            <div class="calc-sub">20% от регистраций</div>
+          </div>
+          <div class="calc-card">
+            <div class="calc-label">Доход/мес</div>
+            <div class="calc-value" id="revenueVal">$360</div>
+            <div class="calc-sub">$9 × 40 юзеров</div>
+          </div>
+          <div class="calc-card profit-card">
+            <div class="calc-label">Ваш профит</div>
+            <div class="calc-value profit-value" id="profitVal">$90</div>
+            <div class="profit-sub">25% · пожизненно</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="terms-row">
+        <div class="term-item">
+          <div class="term-num">5</div>
+          <div class="term-label">публикаций за месяц</div>
+        </div>
+        <div class="term-item">
+          <div class="term-num">25%</div>
+          <div class="term-label">с каждого оплатившего</div>
+        </div>
+        <div class="term-item">
+          <div class="term-num">∞</div>
+          <div class="term-label">без срока сгорания</div>
+        </div>
+        <div class="term-item">
+          <div class="term-num">$0</div>
+          <div class="term-label">вложений с вашей стороны</div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="security" id="security">
+        <div class="sec-item"><div class="sec-icon">🔒</div> Read-only доступ к кошелькам</div>
+        <div class="sec-item"><div class="sec-icon">🛡️</div> Не запрашиваем приватные ключи</div>
+        <div class="sec-item"><div class="sec-icon">⚡</div> Кеш данных 24 часа</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <div class="contact">
+    Вопросы? Пишите в ЛС — <a href="https://t.me/nikita" target="_blank">@nikita</a>
+  </div>
+
+</div>
+
+<script>
+// === DEMO DATA ===
+const wallets = [
+  { addr: '0x7a3b...8f2c', label: 'Ферма 1', drops: {
+    arbitrum: { status: 'eligible', done: 3, total: 3, criteria: [
+      { name: 'Min tx', val: '15/10', ok: true },
+      { name: 'Min объём', val: '$2,100/$2,000', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true }
+    ]},
+    zksync: { status: 'eligible', done: 5, total: 5, criteria: [
+      { name: 'Min tx', val: '22/15', ok: true },
+      { name: 'Min объём', val: '$3,400/$3,000', ok: true },
+      { name: 'Min дни', val: '14/10', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$120 ZK', ok: true }
+    ]},
+    layerzero: { status: 'partial', done: 3, total: 5, criteria: [
+      { name: 'Min tx', val: '15/10', ok: true },
+      { name: 'Min объём', val: '$1,200/$1,000', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Min дни', val: '8/12', ok: false },
+      { name: 'Hold токен', val: '$0 ZRO', ok: false }
+    ], remaining: '4 уникальных дня + холд $50 в ZRO' },
+    starknet: { status: 'not', done: 0, total: 4, criteria: [
+      { name: 'Min tx', val: '0/10', ok: false },
+      { name: 'Min объём', val: '$0/$500', ok: false },
+      { name: 'Min дни', val: '0/5', ok: false },
+      { name: 'Контракт', val: 'не найден', ok: false }
+    ]},
+    eigenlayer: { status: 'partial', done: 2, total: 3, criteria: [
+      { name: 'Min объём', val: '$800/$500', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$0 EIG', ok: false }
+    ], remaining: 'холд $100 в EIG' }
+  }},
+  { addr: '0x4e1f...a9b3', label: 'Основной', drops: {
+    arbitrum: { status: 'eligible', done: 3, total: 3, criteria: [
+      { name: 'Min tx', val: '28/10', ok: true },
+      { name: 'Min объём', val: '$5,200/$2,000', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true }
+    ]},
+    zksync: { status: 'partial', done: 2, total: 5, criteria: [
+      { name: 'Min tx', val: '8/15', ok: false },
+      { name: 'Min объём', val: '$1,800/$3,000', ok: false },
+      { name: 'Min дни', val: '6/10', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$0 ZK', ok: false }
+    ], remaining: '7 tx + $1,200 объёма + холд $50 в ZK' },
+    layerzero: { status: 'eligible', done: 5, total: 5, criteria: [
+      { name: 'Min tx', val: '31/10', ok: true },
+      { name: 'Min объём', val: '$4,500/$1,000', ok: true },
+      { name: 'Min дни', val: '20/12', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$200 ZRO', ok: true }
+    ]},
+    starknet: { status: 'partial', done: 1, total: 4, criteria: [
+      { name: 'Min tx', val: '3/10', ok: false },
+      { name: 'Min объём', val: '$150/$500', ok: false },
+      { name: 'Min дни', val: '2/5', ok: true },
+      { name: 'Контракт', val: 'найден', ok: false }
+    ], remaining: '7 tx + $350 объёма + контракт' },
+    eigenlayer: { status: 'eligible', done: 3, total: 3, criteria: [
+      { name: 'Min объём', val: '$1,200/$500', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$250 EIG', ok: true }
+    ]}
+  }},
+  { addr: '0xc8d2...3f1e', label: 'Тестовый', drops: {
+    arbitrum: { status: 'not', done: 0, total: 3, criteria: [
+      { name: 'Min tx', val: '0/10', ok: false },
+      { name: 'Min объём', val: '$0/$2,000', ok: false },
+      { name: 'Контракт', val: 'не найден', ok: false }
+    ]},
+    zksync: { status: 'not', done: 0, total: 5, criteria: [
+      { name: 'Min tx', val: '0/15', ok: false },
+      { name: 'Min объём', val: '$0/$3,000', ok: false },
+      { name: 'Min дни', val: '0/10', ok: false },
+      { name: 'Контракт', val: 'не найден', ok: false },
+      { name: 'Hold токен', val: '$0 ZK', ok: false }
+    ]},
+    layerzero: { status: 'partial', done: 2, total: 5, criteria: [
+      { name: 'Min tx', val: '5/10', ok: false },
+      { name: 'Min объём', val: '$300/$1,000', ok: false },
+      { name: 'Min дни', val: '3/12', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true },
+      { name: 'Hold токен', val: '$0 ZRO', ok: false }
+    ], remaining: '5 tx + $700 объёма + 9 дней + холд $50 ZRO' },
+    starknet: { status: 'eligible', done: 4, total: 4, criteria: [
+      { name: 'Min tx', val: '18/10', ok: true },
+      { name: 'Min объём', val: '$850/$500', ok: true },
+      { name: 'Min дни', val: '8/5', ok: true },
+      { name: 'Контракт', val: 'найден', ok: true }
+    ]},
+    eigenlayer: { status: 'not', done: 0, total: 3, criteria: [
+      { name: 'Min объём', val: '$0/$500', ok: false },
+      { name: 'Контракт', val: 'не найден', ok: false },
+      { name: 'Hold токен', val: '$0 EIG', ok: false }
+    ]}
+  }}
+];
+
+const dropNames = ['arbitrum', 'zksync', 'layerzero', 'starknet', 'eigenlayer'];
+const dropLabels = { arbitrum: 'Arbitrum', zksync: 'ZKsync', layerzero: 'LayerZero', starknet: 'Starknet', eigenlayer: 'EigenLayer' };
+const statusConfig = {
+  eligible: { icon: '✅', text: 'Eligible', class: 'status-eligible' },
+  partial:   { icon: '🟡', text: '', class: 'status-partial' },
+  not:       { icon: '🔴', text: '', class: 'status-not' }
+};
+
+let expandedRow = null;
+
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  wallets.forEach((w, wi) => {
+    const tr = document.createElement('tr');
+    let html = `<td><div class="wallet-addr">${w.addr}</div><div class="wallet-label">${w.label}</div></td>`;
+    dropNames.forEach(d => {
+      const drop = w.drops[d];
+      const cfg = statusConfig[drop.status];
+      let label = cfg.text;
+      if (drop.status === 'partial') label = `${drop.done}/${drop.total}`;
+      else if (drop.status === 'not') label = `0/${drop.total}`;
+      html += `<td><span class="status ${cfg.class}" onclick="toggleDetail(${wi}, '${d}')">${cfg.icon} ${label}</span></td>`;
+    });
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+
+    // Detail row (hidden by default)
+    const detailTr = document.createElement('tr');
+    detailTr.className = 'detail-row';
+    detailTr.style.display = 'none';
+    detailTr.id = `detail-${wi}`;
+    tbody.appendChild(detailTr);
+  });
+}
+
+function toggleDetail(wi, dropName) {
+  const detailRow = document.getElementById(`detail-${wi}`);
+  if (expandedRow === detailRow) {
+    detailRow.style.display = 'none';
+    expandedRow = null;
+    return;
+  }
+  // Hide previous
+  if (expandedRow) expandedRow.style.display = 'none';
+
+  const w = wallets[wi];
+  const drop = w.drops[dropName];
+  let html = `<td colspan="6">
+    <div class="detail-header">Кошелёк «${w.label}» · ${dropLabels[dropName]}</div>
+    <div class="criteria">`;
+  drop.criteria.forEach(c => {
+    html += `<span class="criteria-item"><span class="${c.ok ? 'check' : 'cross'}">${c.ok ? '✓' : '✗'}</span> ${c.name}: ${c.val}</span>`;
+  });
+  html += '</div>';
+  if (drop.remaining) {
+    html += `<div class="remaining">Осталось: ${drop.remaining}</div>`;
+  }
+  html += '</td>';
+  detailRow.innerHTML = html;
+  detailRow.style.display = 'table-row';
+  expandedRow = detailRow;
+}
+
+function refreshDemo() {
+  const btn = document.querySelector('.refresh-btn');
+  btn.textContent = '↻ Обновление...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = '✓ Обновлено';
+    setTimeout(() => {
+      btn.textContent = '↻ Обновить';
+      btn.disabled = false;
+    }, 1500);
+  }, 800);
+}
+
+// === CALCULATOR ===
+function updateCalc() {
+  const aud = parseInt(document.getElementById('audienceSlider').value);
+  const conv = parseFloat(document.getElementById('convSlider').value);
+  const regs = Math.round(aud * conv / 100);
+  const pay = Math.round(regs * 0.2);
+  const revenue = pay * 9;
+  const profit = Math.round(revenue * 0.25);
+
+  document.getElementById('audienceVal').textContent = aud >= 1000 ? (aud/1000).toFixed(0) + 'K' : aud;
+  document.getElementById('convVal').textContent = conv + '%';
+  document.getElementById('regsVal').textContent = regs;
+  document.getElementById('payVal').textContent = pay;
+  document.getElementById('revenueVal').textContent = '$' + revenue;
+  document.getElementById('profitVal').textContent = '$' + profit;
+}
+
+// === UTILITIES ===
+function scrollToId(id) {
+  document.getElementById(id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function copyPromo() {
+  navigator.clipboard.writeText('FARM2026').then(() => {
+    const btn = document.querySelector('.promocode-copy');
+    btn.textContent = '✓ Скопировано';
+    setTimeout(() => btn.textContent = 'Копировать', 2000);
+  }).catch(() => {});
+}
+
+// === INIT ===
+renderTable();
+updateCalc();
+</script>
+
+</body>
+</html>
